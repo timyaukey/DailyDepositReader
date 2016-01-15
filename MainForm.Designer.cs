@@ -37,9 +37,6 @@
             this.txtFolder = new System.Windows.Forms.TextBox();
             this.lblCurrentFile = new System.Windows.Forms.Label();
             this.grdResults = new System.Windows.Forms.DataGridView();
-            this.ctlFolderBrowser = new System.Windows.Forms.FolderBrowserDialog();
-            this.btnBrowseFolder = new System.Windows.Forms.Button();
-            this.txtWeekDayPercents = new System.Windows.Forms.TextBox();
             this.ActivityDate = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.DayOfWeek = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Weather = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -50,6 +47,9 @@
             this.CardReg = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.CardMach = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.BankDep = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.CoffeeTrx = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.CoffeeCups = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.CoffeePrice = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Gift = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.BirdSeed = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Plant = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -71,6 +71,9 @@
             this.Unused5 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.GiftCard = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.NotVoided = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.ctlFolderBrowser = new System.Windows.Forms.FolderBrowserDialog();
+            this.btnBrowseFolder = new System.Windows.Forms.Button();
+            this.txtWeekDayPercents = new System.Windows.Forms.TextBox();
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -146,9 +149,9 @@
             this.grdResults.AllowUserToAddRows = false;
             this.grdResults.AllowUserToDeleteRows = false;
             this.grdResults.AllowUserToResizeRows = false;
-            this.grdResults.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-                        | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.grdResults.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.grdResults.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.grdResults.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.ActivityDate,
@@ -161,6 +164,9 @@
             this.CardReg,
             this.CardMach,
             this.BankDep,
+            this.CoffeeTrx,
+            this.CoffeeCups,
+            this.CoffeePrice,
             this.Gift,
             this.BirdSeed,
             this.Plant,
@@ -187,26 +193,6 @@
             this.grdResults.ReadOnly = true;
             this.grdResults.Size = new System.Drawing.Size(978, 333);
             this.grdResults.TabIndex = 8;
-            // 
-            // btnBrowseFolder
-            // 
-            this.btnBrowseFolder.Location = new System.Drawing.Point(486, 20);
-            this.btnBrowseFolder.Name = "btnBrowseFolder";
-            this.btnBrowseFolder.Size = new System.Drawing.Size(75, 23);
-            this.btnBrowseFolder.TabIndex = 9;
-            this.btnBrowseFolder.Text = "Browse...";
-            this.btnBrowseFolder.UseVisualStyleBackColor = true;
-            this.btnBrowseFolder.Click += new System.EventHandler(this.btnBrowseFolder_Click);
-            // 
-            // txtWeekDayPercents
-            // 
-            this.txtWeekDayPercents.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtWeekDayPercents.Enabled = false;
-            this.txtWeekDayPercents.Location = new System.Drawing.Point(695, 12);
-            this.txtWeekDayPercents.Multiline = true;
-            this.txtWeekDayPercents.Name = "txtWeekDayPercents";
-            this.txtWeekDayPercents.Size = new System.Drawing.Size(298, 161);
-            this.txtWeekDayPercents.TabIndex = 10;
             // 
             // ActivityDate
             // 
@@ -273,6 +259,24 @@
             this.BankDep.HeaderText = "Cash & Checks";
             this.BankDep.Name = "BankDep";
             this.BankDep.ReadOnly = true;
+            // 
+            // CoffeeTrx
+            // 
+            this.CoffeeTrx.HeaderText = "Coffee Trx";
+            this.CoffeeTrx.Name = "CoffeeTrx";
+            this.CoffeeTrx.ReadOnly = true;
+            // 
+            // CoffeeCups
+            // 
+            this.CoffeeCups.HeaderText = "Coffee Cups";
+            this.CoffeeCups.Name = "CoffeeCups";
+            this.CoffeeCups.ReadOnly = true;
+            // 
+            // CoffeePrice
+            // 
+            this.CoffeePrice.HeaderText = "Coffee Price";
+            this.CoffeePrice.Name = "CoffeePrice";
+            this.CoffeePrice.ReadOnly = true;
             // 
             // Gift
             // 
@@ -400,6 +404,26 @@
             this.NotVoided.Name = "NotVoided";
             this.NotVoided.ReadOnly = true;
             // 
+            // btnBrowseFolder
+            // 
+            this.btnBrowseFolder.Location = new System.Drawing.Point(486, 20);
+            this.btnBrowseFolder.Name = "btnBrowseFolder";
+            this.btnBrowseFolder.Size = new System.Drawing.Size(75, 23);
+            this.btnBrowseFolder.TabIndex = 9;
+            this.btnBrowseFolder.Text = "Browse...";
+            this.btnBrowseFolder.UseVisualStyleBackColor = true;
+            this.btnBrowseFolder.Click += new System.EventHandler(this.btnBrowseFolder_Click);
+            // 
+            // txtWeekDayPercents
+            // 
+            this.txtWeekDayPercents.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtWeekDayPercents.Enabled = false;
+            this.txtWeekDayPercents.Location = new System.Drawing.Point(695, 12);
+            this.txtWeekDayPercents.Multiline = true;
+            this.txtWeekDayPercents.Name = "txtWeekDayPercents";
+            this.txtWeekDayPercents.Size = new System.Drawing.Size(298, 161);
+            this.txtWeekDayPercents.TabIndex = 10;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -419,7 +443,7 @@
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "MainForm";
-            this.Text = "Read Daily Deposit Files (ver 3/7/2015)";
+            this.Text = "Read Daily Deposit Files (ver 1/14/2016)";
             this.Load += new System.EventHandler(this.MainForm_Load);
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).EndInit();
             this.ResumeLayout(false);
@@ -451,6 +475,9 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn CardReg;
         private System.Windows.Forms.DataGridViewTextBoxColumn CardMach;
         private System.Windows.Forms.DataGridViewTextBoxColumn BankDep;
+        private System.Windows.Forms.DataGridViewTextBoxColumn CoffeeTrx;
+        private System.Windows.Forms.DataGridViewTextBoxColumn CoffeeCups;
+        private System.Windows.Forms.DataGridViewTextBoxColumn CoffeePrice;
         private System.Windows.Forms.DataGridViewTextBoxColumn Gift;
         private System.Windows.Forms.DataGridViewTextBoxColumn BirdSeed;
         private System.Windows.Forms.DataGridViewTextBoxColumn Plant;

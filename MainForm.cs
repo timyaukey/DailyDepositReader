@@ -28,10 +28,13 @@ namespace DailyDepositReader
         CardReg = 7,
         CardMachine = 8,
         CashChecks = 9,
-        FirstCat = 10,
-        LastCat = 29,
+        CoffeeTrx = 10,
+        CoffeeCups = 11,
+        CoffeeAvgPrice = 12,
+        FirstCat = 13,
+        LastCat = 32,
         CatCount = 20,
-        NotVoided = 30
+        NotVoided = 33
     }
         
     public partial class MainForm : Form
@@ -61,8 +64,12 @@ namespace DailyDepositReader
             int[] dayOfWeekCounts = new int[7];
             decimal[] columnTotals = new decimal[50];   // more columns than really needed
             StringBuilder lines = new StringBuilder();
+            // Look for "//ADDCOL" for places to change to add a column.
+            //ADDCOL - Add the column to the grid in the form designer.
+            //ADDCOL - Add the column header to the statement below.
             lines.Append("Date\tDayOfWeek\tWeather\tCircumstances" +
                 "\tNet\tTrx Count\tAvg Sale\tCard Reg\tCard Machine\tBank Dep" +
+                "\tCoffee Trx\tCoffee Cups\tCoffee Price" +
                 "\tGift\tBird Seed\tPlant\tGeneral\tSeasonal\tWater\tSoil" +
                 "\tHouseplant\tTools\tWreaths\tSeeds\tFert" +
                 "\tPots\tPruners\tChocolate\tBulbs\tChemicals" +
@@ -250,6 +257,13 @@ namespace DailyDepositReader
             int cardColumn;
             List<string> cardMachines = new List<string>();
             string bankDeposit;
+            string coffeeTrx = "0";
+            int coffeeTrxInt;
+            int coffeeTrxHour;
+            string coffeeCups = "0";
+            int coffeeCupsInt = 0;
+            string coffeeAvgPrice = "";
+            int coffeeRow;
             string notVoided;
             decimal[] catAmounts = new decimal[(int)ColumnIndex.CatCount + 1];
             int largestCatNum = 0;
@@ -357,6 +371,18 @@ namespace DailyDepositReader
                             }
                         }
                         bankDeposit = reconcileSheet.GetValue("B", 69);
+                        coffeeTrxInt = 0;
+                        for (coffeeRow = 79; coffeeRow <= 93; coffeeRow++)
+                        {
+                            string cnt = reconcileSheet.GetValue(5, coffeeRow);
+                            if (Int32.TryParse(cnt, out coffeeTrxHour))
+                            {
+                                coffeeTrxInt += coffeeTrxHour;
+                            }
+                        }
+                        coffeeTrx = coffeeTrxInt.ToString();
+                        coffeeCups = reconcileSheet.GetValue(6, 62);
+                        coffeeCupsInt = Int32.Parse(coffeeCups);
                         notVoided = reconcileSheet.GetValue("B", 55);
                         firstCatRow = 10;
                         totalsColumn = 2;
@@ -387,6 +413,7 @@ namespace DailyDepositReader
                     }
                     netStripped = net.Replace("$", string.Empty);
                 }
+                //ADDCOL - Add the column value to the statement below.
                 resultRow =
                     activityDate + "\t" +
                     dayOfWeek + "\t" +
@@ -397,8 +424,13 @@ namespace DailyDepositReader
                     avgsale.Replace("$", string.Empty) + "\t" +
                     cardRegister.Replace("$", string.Empty) + "\t" +
                     cardMachine.Replace("$", string.Empty) + "\t" +
-                    bankDeposit.Replace("$", string.Empty);
+                    bankDeposit.Replace("$", string.Empty) + "\t" +
+                    coffeeTrx + "\t" +
+                    coffeeCups + "\t" +
+                    coffeeAvgPrice;
                 gridRow = new DataGridViewRow();
+                //ADDCOL - Call AddCell() with the new column value. Cells must be added from left to right.
+                //ADDCOL - Set the new column value in columnTotals[]. Create a new ColumnIndex enum value for the index.
                 AddCell(gridRow, activityDate);
                 AddCell(gridRow, dayOfWeek.ToString());
                 AddCell(gridRow, weather);
@@ -415,6 +447,10 @@ namespace DailyDepositReader
                 columnTotals[(int)ColumnIndex.CardMachine] += GetMoneyValue(cardMachine);
                 AddCell(gridRow, bankDeposit);
                 columnTotals[(int)ColumnIndex.CashChecks] += GetMoneyValue(bankDeposit);
+                AddCell(gridRow, coffeeTrx);
+                columnTotals[(int)ColumnIndex.CoffeeTrx] += Int32.Parse(coffeeTrx);
+                AddCell(gridRow, coffeeCups);
+                columnTotals[(int)ColumnIndex.CoffeeCups] += coffeeCupsInt;
                 for (int catNum = 1; catNum <= (int)ColumnIndex.CatCount; catNum++)
                 {
                     string catAmount = reconcileSheet.GetValue(totalsColumn, firstCatRow + catNum - 1).Replace("$", string.Empty);
@@ -430,6 +466,12 @@ namespace DailyDepositReader
                 {
                     catAmounts[largestCatNum] -= notVoidedValue;
                 }
+                if (coffeeCupsInt > 0)
+                    coffeeAvgPrice = (catAmounts[19] / coffeeCupsInt).ToString("C2");
+                else
+                    coffeeAvgPrice = "$0.00";
+                AddCell(gridRow, coffeeAvgPrice);
+                columnTotals[(int)ColumnIndex.CoffeeAvgPrice] += GetMoneyValue(coffeeAvgPrice);
                 for (int catNum = 1; catNum <= (int)ColumnIndex.CatCount; catNum++)
                 {
                     resultRow += ("\t" + catAmounts[catNum].ToString("F2"));
@@ -493,10 +535,15 @@ namespace DailyDepositReader
             AddCell(gridRow, string.Empty);
             AddCell(gridRow, string.Empty);
             AddCell(gridRow, string.Empty);
+            //ADDCOL - Call AddCell() for the new column, if necessary
             for (int columnNumber = (int)ColumnIndex.Net; columnNumber <= (int)ColumnIndex.NotVoided; columnNumber++)
             {
-                if (columnNumber == (int)ColumnIndex.TrxCount)
+                if (columnNumber == (int)ColumnIndex.TrxCount ||
+                    columnNumber == (int)ColumnIndex.CoffeeCups ||
+                    columnNumber == (int)ColumnIndex.CoffeeTrx)
                     AddCell(gridRow, columnTotals[columnNumber].ToString("F0"));
+                else if (columnNumber == (int)ColumnIndex.CoffeeAvgPrice)
+                    AddCell(gridRow, string.Empty);
                 else if (columnNumber == (int)ColumnIndex.AvgSale)
                 {
                     if (columnTotals[(int)ColumnIndex.TrxCount] > 0.0M)
@@ -558,6 +605,7 @@ namespace DailyDepositReader
 
         private void AddPercentRow(decimal[] columnTotals)
         {
+            //ADDCOL - Call AddCell() for the new column
             DataGridViewRow gridRow = new DataGridViewRow();
             decimal totalReceipts = columnTotals[(int)ColumnIndex.CardReg] + columnTotals[(int)ColumnIndex.CashChecks];
             AddCell(gridRow, "Percents");
@@ -570,6 +618,9 @@ namespace DailyDepositReader
             AddCell(gridRow, ((columnTotals[(int)ColumnIndex.CardReg] / totalReceipts) * 100).ToString("F1") + "%");
             AddCell(gridRow, string.Empty); // card machine
             AddCell(gridRow, ((columnTotals[(int)ColumnIndex.CashChecks] / totalReceipts) * 100).ToString("F1") + "%");
+            AddCell(gridRow, string.Empty); // coffee trx
+            AddCell(gridRow, string.Empty); // coffee cups
+            AddCell(gridRow, string.Empty); // coffee avg price
             decimal catTotal = 0;
             // Deliberately omit last cat (GC) in computing the category total
             for (int columnNumber = (int)ColumnIndex.FirstCat; columnNumber <= (int)ColumnIndex.LastCat - 1; columnNumber++)
