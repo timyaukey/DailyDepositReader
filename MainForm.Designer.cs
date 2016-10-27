@@ -443,7 +443,7 @@
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "MainForm";
-            this.Text = "Read Daily Deposit Files (ver 1/14/2016)";
+            this.Text = "Read Daily Deposit Files (ver 2/13/2016)";
             this.Load += new System.EventHandler(this.MainForm_Load);
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).EndInit();
             this.ResumeLayout(false);

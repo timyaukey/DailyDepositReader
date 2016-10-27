@@ -62,6 +62,7 @@ namespace DailyDepositReader
             int consecutiveMissingFiles = 0;
             decimal[] dayOfWeekTotals = new decimal[7];
             int[] dayOfWeekCounts = new int[7];
+            HourlyTotals hourlyTotals = new HourlyTotals();
             decimal[] columnTotals = new decimal[50];   // more columns than really needed
             StringBuilder lines = new StringBuilder();
             // Look for "//ADDCOL" for places to change to add a column.
@@ -101,7 +102,7 @@ namespace DailyDepositReader
                     DataGridViewRow gridRow;
                     // This is what parses and computes results.
                     MakeSummaryLine(reconcileSheet, fileName, currentDate, out line, out gridRow,
-                        dayOfWeekTotals, dayOfWeekCounts, columnTotals, weekTotals, exportLines);
+                        dayOfWeekTotals, dayOfWeekCounts, columnTotals, weekTotals, hourlyTotals, exportLines);
                     if (line != null)
                     {
                         lines.AppendLine(line);
@@ -117,6 +118,7 @@ namespace DailyDepositReader
             AddTotalRow(columnTotals);
             AddPercentRow(columnTotals);
             ShowDayOfWeekTotals(dayOfWeekTotals, dayOfWeekCounts);
+            ShowHourlyTotals(hourlyTotals);
             ShowWeekTotals(weekTotals, lines);
             ShowExportLines(exportLines, lines);
             try
@@ -242,7 +244,7 @@ namespace DailyDepositReader
         private void MakeSummaryLine(Sheet reconcileSheet, string fileName, DateTime expectedDate,
             out string resultRow, out DataGridViewRow gridRow, decimal[] dayOfWeekTotals,
             int[] dayOfWeekCounts, decimal[] columnTotals, List<WeekAccumulator> weekTotals,
-            List<string> exportLines)
+            HourlyTotals hourlyTotals, List<string> exportLines)
         {
             string activityDate;
             string weather;
@@ -259,17 +261,20 @@ namespace DailyDepositReader
             string bankDeposit;
             string coffeeTrx = "0";
             int coffeeTrxInt;
-            int coffeeTrxHour;
             string coffeeCups = "0";
             int coffeeCupsInt = 0;
             string coffeeAvgPrice = "";
-            int coffeeRow;
+            int hourlyRow;
             string notVoided;
             decimal[] catAmounts = new decimal[(int)ColumnIndex.CatCount + 1];
             int largestCatNum = 0;
             decimal largestCatValue = -999999.0M;
             int firstCatRow;
             int totalsColumn;
+            int firstRegisterColumn;
+            int lastRegisterColumn;
+            int firstHourlyRow;
+            HourlyDay hourlyDay = new HourlyDay();
             try
             {
                 switch (GetVersion(reconcileSheet))
@@ -320,7 +325,7 @@ namespace DailyDepositReader
                         break;
                     case DailyActivityVersion.V4:
                         // Same as V3, except V3 rows 68 and above moved down by 15
-                        // to make room for the hourly transaction counts.
+                        // to make room for the register transaction counts.
                         activityDate = reconcileSheet.GetValue("B", 3);
                         System.Diagnostics.Debug.WriteLine("V4" + activityDate);
                         weather = reconcileSheet.GetValue("B", 5);
@@ -361,7 +366,10 @@ namespace DailyDepositReader
                         avgsale = reconcileSheet.GetValue("B", 101);
                         cardRegister = reconcileSheet.GetValue("B", 44);
                         cardMachine = reconcileSheet.GetValue("B", 50);
-                        for (cardColumn = 3; cardColumn <= 8; cardColumn++)
+                        firstRegisterColumn = 3;
+                        lastRegisterColumn = 8;
+                        firstHourlyRow = 79;
+                        for (cardColumn = firstRegisterColumn; cardColumn <= lastRegisterColumn; cardColumn++)
                         {
                             if (reconcileSheet.GetValue(cardColumn, 41) != "0")    // trans count reg# (n)
                             {
@@ -372,12 +380,22 @@ namespace DailyDepositReader
                         }
                         bankDeposit = reconcileSheet.GetValue("B", 69);
                         coffeeTrxInt = 0;
-                        for (coffeeRow = 79; coffeeRow <= 93; coffeeRow++)
+                        for (hourlyRow = firstHourlyRow; hourlyRow <= 93; hourlyRow++)
                         {
-                            string cnt = reconcileSheet.GetValue(5, coffeeRow);
-                            if (Int32.TryParse(cnt, out coffeeTrxHour))
+                            for (int hourlyCol = firstRegisterColumn; hourlyCol <= lastRegisterColumn; hourlyCol++)
                             {
-                                coffeeTrxInt += coffeeTrxHour;
+                                int hourTrx;
+                                string cnt = reconcileSheet.GetValue(hourlyCol, hourlyRow);
+                                if (Int32.TryParse(cnt, out hourTrx))
+                                {
+                                    HourlyRegister hourlyReg = hourlyDay.Registers[hourlyCol - firstRegisterColumn];
+                                    hourlyReg.DataCount = 1;
+                                    hourlyReg.HourCounts[hourlyRow - firstHourlyRow] = hourTrx;
+                                    if (hourlyCol == 5)
+                                    {
+                                        coffeeTrxInt += hourTrx;
+                                    }
+                                }
                             }
                         }
                         coffeeTrx = coffeeTrxInt.ToString();
@@ -485,6 +503,24 @@ namespace DailyDepositReader
                 dayOfWeekCounts[(int)dayOfWeek]++;
                 AddToWeekTotals(weekTotals, actDateValue, GetMoneyValue(net));
                 AddToExportLines(exportLines, actDateValue, cardMachines, bankDeposit);
+                switch (dayOfWeek)
+                {
+                    case System.DayOfWeek.Monday:
+                    case System.DayOfWeek.Tuesday:
+                    case System.DayOfWeek.Wednesday:
+                    case System.DayOfWeek.Thursday:
+                    case System.DayOfWeek.Friday:
+                        hourlyTotals.Weekday.Add(hourlyDay);
+                        break;
+                    case System.DayOfWeek.Saturday:
+                        hourlyTotals.Weekend.Add(hourlyDay);
+                        hourlyTotals.Saturday.Add(hourlyDay);
+                        break;
+                    case System.DayOfWeek.Sunday:
+                        hourlyTotals.Weekend.Add(hourlyDay);
+                        hourlyTotals.Sunday.Add(hourlyDay);
+                        break;
+                }
             }
             catch (Exception e)
             {
@@ -559,6 +595,51 @@ namespace DailyDepositReader
                     AddCell(gridRow, columnTotals[columnNumber].ToString("C2"));
             }
             grdResults.Rows.Add(gridRow);
+        }
+
+        private void ShowHourlyTotals(HourlyTotals hourlyTotals)
+        {
+            DataGridViewRow gridRow = new DataGridViewRow();
+            grdResults.Rows.Add(gridRow);
+            gridRow = new DataGridViewRow();
+            AddCell(gridRow, "Hourly Totals");
+            grdResults.Rows.Add(gridRow);
+            ShowHourlyDay(hourlyTotals.Weekday, "Weekday");
+            ShowHourlyDay(hourlyTotals.Weekend, "Weekend");
+            ShowHourlyDay(hourlyTotals.Saturday, "Saturday");
+            ShowHourlyDay(hourlyTotals.Sunday, "Sunday");
+        }
+
+        private void ShowHourlyDay(HourlyDay hourlyDay, string title)
+        {
+            DataGridViewRow gridRow = new DataGridViewRow();
+            grdResults.Rows.Add(gridRow);
+            gridRow = new DataGridViewRow();
+            AddCell(gridRow, title + " Hourly Totals");
+            AddCell(gridRow, "Reg 1");
+            AddCell(gridRow, "Reg 2");
+            AddCell(gridRow, "Reg 3");
+            AddCell(gridRow, "Reg 4");
+            AddCell(gridRow, "Reg 5");
+            AddCell(gridRow, "Reg 6");
+            grdResults.Rows.Add(gridRow);
+            for (int hour = 0; hour < hourlyDay.Registers[0].HourCounts.Length; hour++)
+            {
+                gridRow = new DataGridViewRow();
+                string hourName;
+                if ((hour + 7) > 12)
+                    hourName = (hour + 7 - 12).ToString() + "pm";
+                else
+                    hourName = (hour + 7).ToString() + "am";
+                AddCell(gridRow, hourName);
+                for (int regCol = 0; regCol < hourlyDay.Registers.Length; regCol++)
+                {
+                    HourlyRegister hourlyReg = hourlyDay.Registers[regCol];
+                    string cellText = (((double)hourlyReg.HourCounts[hour])/hourlyReg.DataCount).ToString("N2");
+                    AddCell(gridRow, cellText);
+                }
+                grdResults.Rows.Add(gridRow);
+            }
         }
 
         private void ShowWeekTotals(List<WeekAccumulator> weekTotals, StringBuilder lines)
@@ -823,5 +904,56 @@ namespace DailyDepositReader
             _WeekTotal += dayNet;
             _DayCount++;
         }
+    }
+
+    internal class HourlyRegister
+    {
+        public int[] HourCounts;
+        public int DataCount;
+
+        public HourlyRegister()
+        {
+            HourCounts = new int[15];
+            DataCount = 0;
+        }
+
+        public void Add(HourlyRegister register)
+        {
+            for (int i = 0; i < HourCounts.Length; i++)
+            {
+                HourCounts[i] += register.HourCounts[i];
+            }
+            DataCount += register.DataCount;
+        }
+    }
+
+    internal class HourlyDay
+    {
+        public HourlyRegister[] Registers;
+
+        public HourlyDay()
+        {
+            Registers = new HourlyRegister[6];
+            for (int i = 0; i < Registers.Length; i++)
+            {
+                Registers[i] = new HourlyRegister();
+            }
+        }
+
+        public void Add(HourlyDay day)
+        {
+            for (int i = 0; i < Registers.Length; i++)
+            {
+                Registers[i].Add(day.Registers[i]);
+            }
+        }
+    }
+
+    internal class HourlyTotals
+    {
+        public HourlyDay Weekend = new HourlyDay();
+        public HourlyDay Saturday = new HourlyDay();
+        public HourlyDay Sunday = new HourlyDay();
+        public HourlyDay Weekday = new HourlyDay();
     }
 }
