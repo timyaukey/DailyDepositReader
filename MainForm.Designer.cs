@@ -74,6 +74,7 @@
             this.ctlFolderBrowser = new System.Windows.Forms.FolderBrowserDialog();
             this.btnBrowseFolder = new System.Windows.Forms.Button();
             this.txtWeekDayPercents = new System.Windows.Forms.TextBox();
+            this.chkShowAllWarnings = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -82,7 +83,7 @@
             this.btnRead.Location = new System.Drawing.Point(122, 136);
             this.btnRead.Name = "btnRead";
             this.btnRead.Size = new System.Drawing.Size(175, 23);
-            this.btnRead.TabIndex = 6;
+            this.btnRead.TabIndex = 8;
             this.btnRead.Text = "Read Deposit Files";
             this.btnRead.UseVisualStyleBackColor = true;
             this.btnRead.Click += new System.EventHandler(this.btnRead_Click);
@@ -92,14 +93,14 @@
             this.ctlStartDate.Location = new System.Drawing.Point(122, 48);
             this.ctlStartDate.Name = "ctlStartDate";
             this.ctlStartDate.Size = new System.Drawing.Size(200, 20);
-            this.ctlStartDate.TabIndex = 3;
+            this.ctlStartDate.TabIndex = 4;
             // 
             // ctlEndDate
             // 
             this.ctlEndDate.Location = new System.Drawing.Point(122, 74);
             this.ctlEndDate.Name = "ctlEndDate";
             this.ctlEndDate.Size = new System.Drawing.Size(200, 20);
-            this.ctlEndDate.TabIndex = 5;
+            this.ctlEndDate.TabIndex = 6;
             // 
             // label1
             // 
@@ -107,7 +108,7 @@
             this.label1.Location = new System.Drawing.Point(12, 54);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(58, 13);
-            this.label1.TabIndex = 2;
+            this.label1.TabIndex = 3;
             this.label1.Text = "Start Date:";
             // 
             // label2
@@ -116,7 +117,7 @@
             this.label2.Location = new System.Drawing.Point(12, 80);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(55, 13);
-            this.label2.TabIndex = 4;
+            this.label2.TabIndex = 5;
             this.label2.Text = "End Date:";
             // 
             // label3
@@ -192,7 +193,7 @@
             this.grdResults.Name = "grdResults";
             this.grdResults.ReadOnly = true;
             this.grdResults.Size = new System.Drawing.Size(978, 333);
-            this.grdResults.TabIndex = 8;
+            this.grdResults.TabIndex = 10;
             // 
             // ActivityDate
             // 
@@ -409,7 +410,7 @@
             this.btnBrowseFolder.Location = new System.Drawing.Point(486, 20);
             this.btnBrowseFolder.Name = "btnBrowseFolder";
             this.btnBrowseFolder.Size = new System.Drawing.Size(75, 23);
-            this.btnBrowseFolder.TabIndex = 9;
+            this.btnBrowseFolder.TabIndex = 2;
             this.btnBrowseFolder.Text = "Browse...";
             this.btnBrowseFolder.UseVisualStyleBackColor = true;
             this.btnBrowseFolder.Click += new System.EventHandler(this.btnBrowseFolder_Click);
@@ -422,13 +423,24 @@
             this.txtWeekDayPercents.Multiline = true;
             this.txtWeekDayPercents.Name = "txtWeekDayPercents";
             this.txtWeekDayPercents.Size = new System.Drawing.Size(298, 161);
-            this.txtWeekDayPercents.TabIndex = 10;
+            this.txtWeekDayPercents.TabIndex = 11;
+            // 
+            // chkShowAllWarnings
+            // 
+            this.chkShowAllWarnings.AutoSize = true;
+            this.chkShowAllWarnings.Location = new System.Drawing.Point(330, 140);
+            this.chkShowAllWarnings.Name = "chkShowAllWarnings";
+            this.chkShowAllWarnings.Size = new System.Drawing.Size(116, 17);
+            this.chkShowAllWarnings.TabIndex = 9;
+            this.chkShowAllWarnings.Text = "Report all warnings";
+            this.chkShowAllWarnings.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1005, 528);
+            this.Controls.Add(this.chkShowAllWarnings);
             this.Controls.Add(this.txtWeekDayPercents);
             this.Controls.Add(this.btnBrowseFolder);
             this.Controls.Add(this.grdResults);
@@ -443,7 +455,7 @@
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "MainForm";
-            this.Text = "Read Daily Deposit Files (ver 2/13/2016)";
+            this.Text = "Read Daily Deposit Files (ver 3/26/2017)";
             this.Load += new System.EventHandler(this.MainForm_Load);
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).EndInit();
             this.ResumeLayout(false);
@@ -499,6 +511,7 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn Unused5;
         private System.Windows.Forms.DataGridViewTextBoxColumn GiftCard;
         private System.Windows.Forms.DataGridViewTextBoxColumn NotVoided;
+        private System.Windows.Forms.CheckBox chkShowAllWarnings;
     }
 }
 
