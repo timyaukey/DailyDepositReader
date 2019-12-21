@@ -64,6 +64,7 @@ namespace DailyDepositReader
         {
             int consecutiveMissingFiles = 0;
             int cardMachineCountPrevious = 0;
+            int filesLoaded = 0;
             mShowAllDiagnostics = chkShowAllWarnings.Checked;
             decimal[] dayOfWeekTotals = new decimal[7];
             int[] dayOfWeekCounts = new int[7];
@@ -77,7 +78,7 @@ namespace DailyDepositReader
                 "\tNet\tTrx Count\tAvg Sale\tCard Reg\tCard Machine\tBank Dep" +
                 "\tCoffee Trx\tCoffee Cups\tCoffee Price" +
                 "\tGift\tBird Seed\tPlant\tGeneral\tSeasonal\tWater\tSoil" +
-                "\tHouseplant\tTools\tWreaths\tSeeds\tFert" +
+                "\tHouseplant\tTools\tBaked\tSeeds\tFert" +
                 "\tPots\tPruners\tChocolate\tBulbs\tChemicals" +
                 "\tBird Feeders\tUnused\tGC\tNot Voided" + Environment.NewLine);
             List<WeekAccumulator> weekTotals = new List<WeekAccumulator>();
@@ -119,6 +120,7 @@ namespace DailyDepositReader
                             ShowFileWarning(fileName, "Previous file has different number of registers / card machines");
                         }
                         cardMachineCountPrevious = cardMachineCountCurrent;
+                        filesLoaded++;
                     }
                 }
                 if (consecutiveMissingFiles > 2)
@@ -127,22 +129,27 @@ namespace DailyDepositReader
                     break;
                 }
             }
-            AddTotalRow(columnTotals);
-            AddPercentRow(columnTotals);
-            ShowDayOfWeekTotals(dayOfWeekTotals, dayOfWeekCounts);
-            ShowHourlyTotals(hourlyTotals);
-            ShowWeekTotals(weekTotals, lines);
-            ShowExportLines(exportLines, lines);
-            try
+            if (filesLoaded > 0)
             {
-                Clipboard.Clear();
-                Clipboard.SetText(lines.ToString());
-                ShowMessage("File(s) read and clipboard loaded.");
+                AddTotalRow(columnTotals);
+                AddPercentRow(columnTotals);
+                ShowDayOfWeekTotals(dayOfWeekTotals, dayOfWeekCounts);
+                ShowHourlyTotals(hourlyTotals);
+                ShowWeekTotals(weekTotals, lines);
+                //ShowExportLines(exportLines, lines);
+                try
+                {
+                    Clipboard.Clear();
+                    Clipboard.SetText(lines.ToString());
+                    ShowMessage("File(s) read and clipboard loaded.");
+                }
+                catch (Exception ex)
+                {
+                    ShowMessage("Error placing summary on clipboard: " + ex.Message);
+                }
             }
-            catch (Exception ex)
-            {
-                ShowMessage("Error placing summary on clipboard: " + ex.Message);
-            }
+            else
+                ShowMessage("No files loaded");
             using (MessageListForm msgForm = new MessageListForm())
             {
                 msgForm.Show(mMessages);
@@ -420,7 +427,8 @@ namespace DailyDepositReader
                             }
                         }
                         // (Cash adjusted for short) - (less checks)
-                        bankDeposit = (GetMoneyValue( reconcileSheet.GetValue("B", 71)) - GetMoneyValue(reconcileSheet.GetValue("B", 70))).ToString("C2");
+                        bankDeposit = (GetMoneyValue( reconcileSheet.GetValue("B", 71), "Cash to deposit")
+                            - GetMoneyValue(reconcileSheet.GetValue("B", 70), "Checks to deposit")).ToString("C2");
                         coffeeTrxInt = 0;
                         for (hourlyRow = firstHourlyRow; hourlyRow <= 93; hourlyRow++)
                         {
@@ -428,25 +436,23 @@ namespace DailyDepositReader
                             {
                                 int hourTrx;
                                 string cnt = reconcileSheet.GetValue(hourlyCol, hourlyRow);
-                                if (Int32.TryParse(cnt, out hourTrx))
+                                hourTrx = GetIntegerValue(cnt, "Hourly trx count");
+                                HourlyRegister hourlyReg = hourlyDay.Registers[hourlyCol - firstRegisterColumn];
+                                hourlyReg.DataCount = 1;
+                                hourlyReg.HourCounts[hourlyRow - firstHourlyRow] = hourTrx;
+                                if (hourlyCol == 5)
                                 {
-                                    HourlyRegister hourlyReg = hourlyDay.Registers[hourlyCol - firstRegisterColumn];
-                                    hourlyReg.DataCount = 1;
-                                    hourlyReg.HourCounts[hourlyRow - firstHourlyRow] = hourTrx;
-                                    if (hourlyCol == 5)
-                                    {
-                                        coffeeTrxInt += hourTrx;
-                                    }
+                                    coffeeTrxInt += hourTrx;
                                 }
                             }
                         }
                         coffeeTrx = coffeeTrxInt.ToString();
                         coffeeCups = reconcileSheet.GetValue(6, 62);
-                        coffeeCupsInt = Int32.Parse(coffeeCups);
+                        coffeeCupsInt = GetIntegerValue(coffeeCups, "Coffee cups");
                         notVoided = reconcileSheet.GetValue("B", 55);
                         firstCatRow = 10;
                         totalsColumn = 2;
-                        shortAdjust = GetMoneyValue(reconcileSheet.GetValue("B", 73));
+                        shortAdjust = GetMoneyValue(reconcileSheet.GetValue("B", 73), "Adjustment for short");
                         if (mShowAllDiagnostics && (shortAdjust != 0))
                         {
                             ShowFileWarning(fileName, "Short adjustment " + shortAdjust);
@@ -463,10 +469,10 @@ namespace DailyDepositReader
                 if (giftLabel.Substring(0, 3) != "D01")
                     throw new DataException("Expected categories to start on row " + firstCatRow.ToString());
                 string netStripped = net.Replace("$", string.Empty);
-                decimal notVoidedValue = GetMoneyValue(notVoided);
+                decimal notVoidedValue = GetMoneyValue(notVoided, "Ring errors");
                 if (notVoidedValue != 0.0M)
                 {
-                    decimal adjustedNet = GetMoneyValue(net) - notVoidedValue;
+                    decimal adjustedNet = GetMoneyValue(net, "Net 1") - notVoidedValue;
                     net = adjustedNet.ToString("C2");
                     if (!string.IsNullOrEmpty(avgsale))
                     {
@@ -501,25 +507,25 @@ namespace DailyDepositReader
                 AddCell(gridRow, weather);
                 AddCell(gridRow, circumstances);
                 AddCell(gridRow, net);
-                columnTotals[(int)ColumnIndex.Net] += GetMoneyValue(net);
+                columnTotals[(int)ColumnIndex.Net] += GetMoneyValue(net, "Net 1");
                 AddCell(gridRow, trxcount);
                 if (!string.IsNullOrEmpty(trxcount))
-                    columnTotals[(int)ColumnIndex.TrxCount] += Int32.Parse(trxcount);
+                    columnTotals[(int)ColumnIndex.TrxCount] += GetIntegerValue(trxcount, "Trx count");
                 AddCell(gridRow, avgsale);
                 AddCell(gridRow, cardRegister);
-                columnTotals[(int)ColumnIndex.CardReg] += GetMoneyValue(cardRegister);
+                columnTotals[(int)ColumnIndex.CardReg] += GetMoneyValue(cardRegister, "Card register");
                 AddCell(gridRow, cardMachine);
-                columnTotals[(int)ColumnIndex.CardMachine] += GetMoneyValue(cardMachine);
+                columnTotals[(int)ColumnIndex.CardMachine] += GetMoneyValue(cardMachine, "Card machine");
                 AddCell(gridRow, bankDeposit);
-                columnTotals[(int)ColumnIndex.CashChecks] += GetMoneyValue(bankDeposit);
+                columnTotals[(int)ColumnIndex.CashChecks] += GetMoneyValue(bankDeposit, "Bank deposit");
                 AddCell(gridRow, coffeeTrx);
-                columnTotals[(int)ColumnIndex.CoffeeTrx] += Int32.Parse(coffeeTrx);
+                columnTotals[(int)ColumnIndex.CoffeeTrx] += GetIntegerValue(coffeeTrx, "Coffee trx count");
                 AddCell(gridRow, coffeeCups);
                 columnTotals[(int)ColumnIndex.CoffeeCups] += coffeeCupsInt;
                 for (int catNum = 1; catNum <= (int)ColumnIndex.CatCount; catNum++)
                 {
                     string catAmount = reconcileSheet.GetValue(totalsColumn, firstCatRow + catNum - 1).Replace("$", string.Empty);
-                    decimal catAmountValue = GetMoneyValue(catAmount);
+                    decimal catAmountValue = GetMoneyValue(catAmount, "Category amount");
                     catAmounts[catNum] = catAmountValue;
                     if (catAmountValue > largestCatValue)
                     {
@@ -536,7 +542,7 @@ namespace DailyDepositReader
                 else
                     coffeeAvgPrice = "$0.00";
                 AddCell(gridRow, coffeeAvgPrice);
-                columnTotals[(int)ColumnIndex.CoffeeAvgPrice] += GetMoneyValue(coffeeAvgPrice);
+                columnTotals[(int)ColumnIndex.CoffeeAvgPrice] += GetMoneyValue(coffeeAvgPrice, "Average coffee price");
                 for (int catNum = 1; catNum <= (int)ColumnIndex.CatCount; catNum++)
                 {
                     resultRow += ("\t" + catAmounts[catNum].ToString("F2"));
@@ -548,9 +554,9 @@ namespace DailyDepositReader
                 columnTotals[(int)ColumnIndex.NotVoided] += notVoidedValue;
                 dayOfWeekTotals[(int)dayOfWeek] += decimal.Parse(netStripped);
                 dayOfWeekCounts[(int)dayOfWeek]++;
-                AddToWeekTotals(weekTotals, actDateValue, GetMoneyValue(net));
+                AddToWeekTotals(weekTotals, actDateValue, GetMoneyValue(net, "Net 1"));
                 cardMachineCount = cardMachines.Count;
-                AddToExportLines(exportLines, actDateValue, cardMachines, bankDeposit);
+                //AddToExportLines(exportLines, actDateValue, cardMachines, bankDeposit);
                 switch (dayOfWeek)
                 {
                     case System.DayOfWeek.Monday:
@@ -589,28 +595,41 @@ namespace DailyDepositReader
             weekTotals[weekTotals.Count - 1].Add(netValue);
         }
 
-        private void AddToExportLines(List<string> exportLines, DateTime actDateValue,
-            IEnumerable<string> cardMachines, string bankDeposit)
+        //private void AddToExportLines(List<string> exportLines, DateTime actDateValue,
+        //    IEnumerable<string> cardMachines, string bankDeposit)
+        //{
+        //    DayOfWeek dayOfWeek = actDateValue.DayOfWeek;
+        //    int cardIndex = 1;
+        //    foreach (string cardMachine in cardMachines)
+        //    {
+        //        string cardLine = actDateValue.ToShortDateString() + " " +
+        //            "Credit_Card_Deposit_(#" + cardIndex.ToString() + ")_(" + actDateValue.Day.ToString("D2") + "_" + dayOfWeek.ToString() + ") " +
+        //            GetMoneyValue(cardMachine, "Card machine").ToString("F2");
+        //        exportLines.Add(cardLine);
+        //        cardIndex++;
+        //    }
+        //    string cashLine = actDateValue.ToShortDateString() + " " +
+        //        "Cash_&_Check_Deposit_(" + actDateValue.Day.ToString("D2") + "_" + dayOfWeek.ToString() + ") " +
+        //        GetMoneyValue(bankDeposit, "Bank deposit").ToString("F2");
+        //    exportLines.Add(cashLine);
+        //}
+
+        private decimal GetMoneyValue(string input, string errorLabel)
         {
-            DayOfWeek dayOfWeek = actDateValue.DayOfWeek;
-            int cardIndex = 1;
-            foreach (string cardMachine in cardMachines)
-            {
-                string cardLine = actDateValue.ToShortDateString() + " " +
-                    "Credit_Card_Deposit_(#" + cardIndex.ToString() + ")_(" + actDateValue.Day.ToString("D2") + "_" + dayOfWeek.ToString() + ") " +
-                    GetMoneyValue(cardMachine).ToString("F2");
-                exportLines.Add(cardLine);
-                cardIndex++;
-            }
-            string cashLine = actDateValue.ToShortDateString() + " " +
-                "Cash_&_Check_Deposit_(" + actDateValue.Day.ToString("D2") + "_" + dayOfWeek.ToString() + ") " +
-                GetMoneyValue(bankDeposit).ToString("F2");
-            exportLines.Add(cashLine);
+            if (input.Trim() == string.Empty)
+                return 0M;
+            if (decimal.TryParse(input.Replace("$", string.Empty), out decimal result))
+                return result;
+            throw new Exception("Error converting " + errorLabel + " to decimal");
         }
 
-        private decimal GetMoneyValue(string input)
+        private int GetIntegerValue(string input, string errorLabel)
         {
-            return decimal.Parse(input.Replace("$", string.Empty));
+            if (input.Trim() == string.Empty)
+                return 0;
+            if (Int32.TryParse(input, out int result))
+                return result;
+            throw new Exception("Error converting " + errorLabel + " to integer");
         }
 
         private void AddTotalRow(decimal[] columnTotals)
@@ -713,25 +732,25 @@ namespace DailyDepositReader
             }
         }
 
-        private void ShowExportLines(List<string> exportLines, StringBuilder lines)
-        {
-            DataGridViewRow gridRow = new DataGridViewRow();
-            grdResults.Rows.Add(gridRow);
-            lines.AppendLine(string.Empty);
+        //private void ShowExportLines(List<string> exportLines, StringBuilder lines)
+        //{
+        //    DataGridViewRow gridRow = new DataGridViewRow();
+        //    grdResults.Rows.Add(gridRow);
+        //    lines.AppendLine(string.Empty);
 
-            gridRow = new DataGridViewRow();
-            AddCell(gridRow, "Export Lines");
-            grdResults.Rows.Add(gridRow);
-            lines.AppendLine("Export Lines");
+        //    gridRow = new DataGridViewRow();
+        //    AddCell(gridRow, "Export Lines");
+        //    grdResults.Rows.Add(gridRow);
+        //    lines.AppendLine("Export Lines");
 
-            foreach (string exportLine in exportLines)
-            {
-                gridRow = new DataGridViewRow();
-                AddCell(gridRow, exportLine);
-                grdResults.Rows.Add(gridRow);
-                lines.AppendLine(exportLine);
-            }
-        }
+        //    foreach (string exportLine in exportLines)
+        //    {
+        //        gridRow = new DataGridViewRow();
+        //        AddCell(gridRow, exportLine);
+        //        grdResults.Rows.Add(gridRow);
+        //        lines.AppendLine(exportLine);
+        //    }
+        //}
 
         private void AddPercentRow(decimal[] columnTotals)
         {

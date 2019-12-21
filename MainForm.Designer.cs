@@ -37,6 +37,10 @@
             this.txtFolder = new System.Windows.Forms.TextBox();
             this.lblCurrentFile = new System.Windows.Forms.Label();
             this.grdResults = new System.Windows.Forms.DataGridView();
+            this.ctlFolderBrowser = new System.Windows.Forms.FolderBrowserDialog();
+            this.btnBrowseFolder = new System.Windows.Forms.Button();
+            this.txtWeekDayPercents = new System.Windows.Forms.TextBox();
+            this.chkShowAllWarnings = new System.Windows.Forms.CheckBox();
             this.ActivityDate = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.DayOfWeek = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Weather = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -71,10 +75,6 @@
             this.Unused5 = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.GiftCard = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.NotVoided = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.ctlFolderBrowser = new System.Windows.Forms.FolderBrowserDialog();
-            this.btnBrowseFolder = new System.Windows.Forms.Button();
-            this.txtWeekDayPercents = new System.Windows.Forms.TextBox();
-            this.chkShowAllWarnings = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.grdResults)).BeginInit();
             this.SuspendLayout();
             // 
@@ -194,6 +194,36 @@
             this.grdResults.ReadOnly = true;
             this.grdResults.Size = new System.Drawing.Size(978, 333);
             this.grdResults.TabIndex = 10;
+            // 
+            // btnBrowseFolder
+            // 
+            this.btnBrowseFolder.Location = new System.Drawing.Point(486, 20);
+            this.btnBrowseFolder.Name = "btnBrowseFolder";
+            this.btnBrowseFolder.Size = new System.Drawing.Size(75, 23);
+            this.btnBrowseFolder.TabIndex = 2;
+            this.btnBrowseFolder.Text = "Browse...";
+            this.btnBrowseFolder.UseVisualStyleBackColor = true;
+            this.btnBrowseFolder.Click += new System.EventHandler(this.btnBrowseFolder_Click);
+            // 
+            // txtWeekDayPercents
+            // 
+            this.txtWeekDayPercents.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtWeekDayPercents.Enabled = false;
+            this.txtWeekDayPercents.Location = new System.Drawing.Point(695, 12);
+            this.txtWeekDayPercents.Multiline = true;
+            this.txtWeekDayPercents.Name = "txtWeekDayPercents";
+            this.txtWeekDayPercents.Size = new System.Drawing.Size(298, 161);
+            this.txtWeekDayPercents.TabIndex = 11;
+            // 
+            // chkShowAllWarnings
+            // 
+            this.chkShowAllWarnings.AutoSize = true;
+            this.chkShowAllWarnings.Location = new System.Drawing.Point(330, 140);
+            this.chkShowAllWarnings.Name = "chkShowAllWarnings";
+            this.chkShowAllWarnings.Size = new System.Drawing.Size(116, 17);
+            this.chkShowAllWarnings.TabIndex = 9;
+            this.chkShowAllWarnings.Text = "Report all warnings";
+            this.chkShowAllWarnings.UseVisualStyleBackColor = true;
             // 
             // ActivityDate
             // 
@@ -335,7 +365,7 @@
             // 
             // Wreaths
             // 
-            this.Wreaths.HeaderText = "Wreaths";
+            this.Wreaths.HeaderText = "Baked";
             this.Wreaths.Name = "Wreaths";
             this.Wreaths.ReadOnly = true;
             // 
@@ -405,36 +435,6 @@
             this.NotVoided.Name = "NotVoided";
             this.NotVoided.ReadOnly = true;
             // 
-            // btnBrowseFolder
-            // 
-            this.btnBrowseFolder.Location = new System.Drawing.Point(486, 20);
-            this.btnBrowseFolder.Name = "btnBrowseFolder";
-            this.btnBrowseFolder.Size = new System.Drawing.Size(75, 23);
-            this.btnBrowseFolder.TabIndex = 2;
-            this.btnBrowseFolder.Text = "Browse...";
-            this.btnBrowseFolder.UseVisualStyleBackColor = true;
-            this.btnBrowseFolder.Click += new System.EventHandler(this.btnBrowseFolder_Click);
-            // 
-            // txtWeekDayPercents
-            // 
-            this.txtWeekDayPercents.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtWeekDayPercents.Enabled = false;
-            this.txtWeekDayPercents.Location = new System.Drawing.Point(695, 12);
-            this.txtWeekDayPercents.Multiline = true;
-            this.txtWeekDayPercents.Name = "txtWeekDayPercents";
-            this.txtWeekDayPercents.Size = new System.Drawing.Size(298, 161);
-            this.txtWeekDayPercents.TabIndex = 11;
-            // 
-            // chkShowAllWarnings
-            // 
-            this.chkShowAllWarnings.AutoSize = true;
-            this.chkShowAllWarnings.Location = new System.Drawing.Point(330, 140);
-            this.chkShowAllWarnings.Name = "chkShowAllWarnings";
-            this.chkShowAllWarnings.Size = new System.Drawing.Size(116, 17);
-            this.chkShowAllWarnings.TabIndex = 9;
-            this.chkShowAllWarnings.Text = "Report all warnings";
-            this.chkShowAllWarnings.UseVisualStyleBackColor = true;
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -477,6 +477,7 @@
         private System.Windows.Forms.FolderBrowserDialog ctlFolderBrowser;
         private System.Windows.Forms.Button btnBrowseFolder;
         private System.Windows.Forms.TextBox txtWeekDayPercents;
+        private System.Windows.Forms.CheckBox chkShowAllWarnings;
         private System.Windows.Forms.DataGridViewTextBoxColumn ActivityDate;
         private System.Windows.Forms.DataGridViewTextBoxColumn DayOfWeek;
         private System.Windows.Forms.DataGridViewTextBoxColumn Weather;
@@ -511,7 +512,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn Unused5;
         private System.Windows.Forms.DataGridViewTextBoxColumn GiftCard;
         private System.Windows.Forms.DataGridViewTextBoxColumn NotVoided;
-        private System.Windows.Forms.CheckBox chkShowAllWarnings;
     }
 }
 
