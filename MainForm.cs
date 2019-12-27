@@ -306,7 +306,6 @@ namespace DailyDepositReader
             int totalsColumn;
             int firstRegisterColumn;
             int lastRegisterColumn;
-            int firstHourlyRow;
             decimal shortAdjust;
             HourlyDay hourlyDay = new HourlyDay();
             try
@@ -402,13 +401,18 @@ namespace DailyDepositReader
                         cardMachine = reconcileSheet.GetValue("B", 50);
                         firstRegisterColumn = 3;
                         lastRegisterColumn = 8;
-                        firstHourlyRow = 79;
+                        int firstHourlyCountRow = 79;
+                        int lastHourlyCountRow = 93;
+                        int firstHourlyAmountRow = 96;
+                        int lastHourlyAmountRow = 110;
+                        int activeRegisters = 0;
                         for (cardColumn = firstRegisterColumn; cardColumn <= lastRegisterColumn; cardColumn++)
                         {
                             string regNTransCount = reconcileSheet.GetValue(cardColumn, 41);
                             string regNNet1 = reconcileSheet.GetValue(cardColumn, 38);
                             if (regNTransCount != "0" || regNNet1 !="$0.00")
                             {
+                                activeRegisters++;
                                 string cardMachineN = reconcileSheet.GetValue(cardColumn, 50);
                                 cardMachines.Add(cardMachineN);
                                 if (cardMachineN == "$0.00")
@@ -430,22 +434,75 @@ namespace DailyDepositReader
                         bankDeposit = (GetMoneyValue( reconcileSheet.GetValue("B", 71), "Cash to deposit")
                             - GetMoneyValue(reconcileSheet.GetValue("B", 70), "Checks to deposit")).ToString("C2");
                         coffeeTrxInt = 0;
-                        for (hourlyRow = firstHourlyRow; hourlyRow <= 93; hourlyRow++)
+                        for (int hourlyCol = firstRegisterColumn; hourlyCol <= lastRegisterColumn; hourlyCol++)
                         {
-                            for (int hourlyCol = firstRegisterColumn; hourlyCol <= lastRegisterColumn; hourlyCol++)
+                            // First do transaction counts for register
+                            HourlyFigures hourlyReg = hourlyDay.Registers[hourlyCol - firstRegisterColumn];
+                            for (hourlyRow = firstHourlyCountRow; hourlyRow <= lastHourlyCountRow; hourlyRow++)
                             {
-                                int hourTrx;
-                                string cnt = reconcileSheet.GetValue(hourlyCol, hourlyRow);
-                                hourTrx = GetIntegerValue(cnt, "Hourly trx count");
-                                HourlyRegister hourlyReg = hourlyDay.Registers[hourlyCol - firstRegisterColumn];
-                                hourlyReg.DataCount = 1;
-                                hourlyReg.HourCounts[hourlyRow - firstHourlyRow] = hourTrx;
-                                if (hourlyCol == 5)
+                                string cnt = reconcileSheet.GetValue(hourlyCol, hourlyRow).Trim();
+                                if (cnt != "")
                                 {
-                                    coffeeTrxInt += hourTrx;
+                                    int hourTrx = GetIntegerValue(cnt, "Hourly trx count");
+                                    int hourIdx = hourlyRow - firstHourlyCountRow;
+                                    hourlyReg.HourCounts[hourIdx] = hourTrx;
+                                    hourlyDay.CombinedRegisters.HourCounts[hourIdx] += hourTrx;
+                                    if (hourTrx != 0)
+                                        hourlyReg.HourCountDays = 1;
+                                    if (hourlyCol == 5)
+                                        coffeeTrxInt += hourTrx;
+                                }
+                            }
+                            if (hourlyReg.HourCountDays > 0)
+                                hourlyDay.CombinedRegisters.HourCountDays++;
+
+                            // Then do transaction amounts for register
+                            if (reconcileSheet.GetValue("A", 95) == "Hourly Sales")
+                            {
+                                decimal totalRegisterAmount = 0M;
+                                for (hourlyRow = firstHourlyAmountRow; hourlyRow <= lastHourlyAmountRow; hourlyRow++)
+                                {
+                                    string amount = reconcileSheet.GetValue(hourlyCol, hourlyRow).Trim();
+                                    if (amount != "")
+                                    {
+                                        decimal hourAmount = GetMoneyValue(amount, "Hourly trx amount");
+                                        int hourIdx = hourlyRow - firstHourlyAmountRow;
+                                        hourlyReg.HourAmounts[hourIdx] = hourAmount;
+                                        hourlyDay.CombinedRegisters.HourAmounts[hourIdx] += hourAmount;
+                                        totalRegisterAmount += hourAmount;
+                                        if (hourAmount != 0M)
+                                            hourlyReg.HourAmountDays = 1;
+                                    }
+                                }
+                                if (hourlyReg.HourAmountDays > 0)
+                                {
+                                    hourlyDay.CombinedRegisters.HourAmountDays++;
+
+                                    // Sanity check on total amount for register
+                                    string regNetText = reconcileSheet.GetValue(hourlyCol, 38);
+                                    decimal regNet = GetMoneyValue(regNetText, "Register net");
+                                    if (Math.Abs(totalRegisterAmount - regNet) > 10M)
+                                    {
+                                        ShowFileWarning(fileName, "Register #" + (hourlyCol - firstRegisterColumn + 1).ToString() +
+                                            " net differs from hourly amount total by more than $10");
+                                    }
                                 }
                             }
                         }
+                        // Zero out all "present counts" unless all registers were entered,
+                        // otherwise set the "present counts" to 1 because hourlyDay.CombinedRegisters
+                        // represents 1 day.
+                        // Transaction counts
+                        if (hourlyDay.CombinedRegisters.HourCountDays == activeRegisters && activeRegisters > 0)
+                            hourlyDay.CombinedRegisters.HourCountDays = 1;
+                        else
+                            hourlyDay.CombinedRegisters.HourCountDays = 0;
+                        // Transaction amounts
+                        if (hourlyDay.CombinedRegisters.HourAmountDays == activeRegisters && activeRegisters > 0)
+                            hourlyDay.CombinedRegisters.HourAmountDays = 1;
+                        else
+                            hourlyDay.CombinedRegisters.HourAmountDays = 0;
+
                         coffeeTrx = coffeeTrxInt.ToString();
                         coffeeCups = reconcileSheet.GetValue(6, 62);
                         coffeeCupsInt = GetIntegerValue(coffeeCups, "Coffee cups");
@@ -560,11 +617,17 @@ namespace DailyDepositReader
                 switch (dayOfWeek)
                 {
                     case System.DayOfWeek.Monday:
+                        hourlyTotals.Weekday.Add(hourlyDay);
+                        hourlyTotals.Monday.Add(hourlyDay);
+                        break;
                     case System.DayOfWeek.Tuesday:
                     case System.DayOfWeek.Wednesday:
                     case System.DayOfWeek.Thursday:
+                        hourlyTotals.Weekday.Add(hourlyDay);
+                        break;
                     case System.DayOfWeek.Friday:
                         hourlyTotals.Weekday.Add(hourlyDay);
+                        hourlyTotals.Friday.Add(hourlyDay);
                         break;
                     case System.DayOfWeek.Saturday:
                         hourlyTotals.Weekend.Add(hourlyDay);
@@ -673,6 +736,8 @@ namespace DailyDepositReader
             AddCell(gridRow, "Hourly Totals");
             grdResults.Rows.Add(gridRow);
             ShowHourlyDay(hourlyTotals.Weekday, "Weekday");
+            ShowHourlyDay(hourlyTotals.Monday, "Monday");
+            ShowHourlyDay(hourlyTotals.Friday, "Friday");
             ShowHourlyDay(hourlyTotals.Weekend, "Weekend");
             ShowHourlyDay(hourlyTotals.Saturday, "Saturday");
             ShowHourlyDay(hourlyTotals.Sunday, "Sunday");
@@ -690,6 +755,7 @@ namespace DailyDepositReader
             AddCell(gridRow, "Reg 4");
             AddCell(gridRow, "Reg 5");
             AddCell(gridRow, "Reg 6");
+            AddCell(gridRow, "All Reg");
             grdResults.Rows.Add(gridRow);
             for (int hour = 0; hour < hourlyDay.Registers[0].HourCounts.Length; hour++)
             {
@@ -702,12 +768,46 @@ namespace DailyDepositReader
                 AddCell(gridRow, hourName);
                 for (int regCol = 0; regCol < hourlyDay.Registers.Length; regCol++)
                 {
-                    HourlyRegister hourlyReg = hourlyDay.Registers[regCol];
-                    string cellText = (((double)hourlyReg.HourCounts[hour])/hourlyReg.DataCount).ToString("N2");
+                    HourlyFigures hourlyReg = hourlyDay.Registers[regCol];
+                    string cellText = MakeAvgCell(
+                        hourlyReg.HourCounts[hour], 
+                        hourlyReg.HourCountDays, 
+                        hourlyReg.HourAmounts[hour], 
+                        hourlyReg.HourAmountDays);
                     AddCell(gridRow, cellText);
                 }
+                string allRegCellText = MakeAvgCell(
+                    hourlyDay.CombinedRegisters.HourCounts[hour], 
+                    hourlyDay.CombinedRegisters.HourCountDays, 
+                    hourlyDay.CombinedRegisters.HourAmounts[hour],
+                    hourlyDay.CombinedRegisters.HourAmountDays);
+                AddCell(gridRow, allRegCellText);
                 grdResults.Rows.Add(gridRow);
             }
+            gridRow = new DataGridViewRow();
+            AddCell(gridRow, "Count:Amount Days");
+            for (int regCol = 0; regCol < hourlyDay.Registers.Length; regCol++)
+            {
+                HourlyFigures hourlyReg = hourlyDay.Registers[regCol];
+                AddCell(gridRow, hourlyReg.HourCountDays + ":" + hourlyReg.HourAmountDays);
+            }
+            AddCell(gridRow, hourlyDay.CombinedRegisters.HourCountDays + ":" + hourlyDay.CombinedRegisters.HourAmountDays);
+            grdResults.Rows.Add(gridRow);
+        }
+
+        private string MakeAvgCell(int hourCounts, int hourCountsPresent, decimal hourAmounts, int hourAmountsPresent)
+        {
+            string avgCount;
+            if (hourCountsPresent > 0)
+                avgCount = ((double)hourCounts / hourCountsPresent).ToString("N2");
+            else
+                avgCount = "--";
+            string avgAmount;
+            if (hourAmountsPresent > 0)
+                avgAmount = (hourAmounts / hourAmountsPresent).ToString("C2");
+            else
+                avgAmount = "--";
+            return avgCount + "/" + avgAmount;
         }
 
         private void ShowWeekTotals(List<WeekAccumulator> weekTotals, StringBuilder lines)
@@ -974,38 +1074,44 @@ namespace DailyDepositReader
         }
     }
 
-    internal class HourlyRegister
+    internal class HourlyFigures
     {
         public int[] HourCounts;
-        public int DataCount;
+        public int HourCountDays;       // Number of days accumulated
+        public decimal[] HourAmounts;
+        public int HourAmountDays;      // Number of days accumulated
 
-        public HourlyRegister()
+        public HourlyFigures()
         {
             HourCounts = new int[15];
-            DataCount = 0;
+            HourAmounts = new decimal[15];
         }
 
-        public void Add(HourlyRegister register)
+        public void Add(HourlyFigures figures)
         {
             for (int i = 0; i < HourCounts.Length; i++)
             {
-                HourCounts[i] += register.HourCounts[i];
+                HourCounts[i] += figures.HourCounts[i];
+                HourAmounts[i] += figures.HourAmounts[i];
             }
-            DataCount += register.DataCount;
+            HourCountDays += figures.HourCountDays;
+            HourAmountDays += figures.HourAmountDays;
         }
     }
 
     internal class HourlyDay
     {
-        public HourlyRegister[] Registers;
+        public HourlyFigures[] Registers;
+        public HourlyFigures CombinedRegisters;
 
         public HourlyDay()
         {
-            Registers = new HourlyRegister[6];
+            Registers = new HourlyFigures[6];
             for (int i = 0; i < Registers.Length; i++)
             {
-                Registers[i] = new HourlyRegister();
+                Registers[i] = new HourlyFigures();
             }
+            CombinedRegisters = new HourlyFigures();
         }
 
         public void Add(HourlyDay day)
@@ -1014,6 +1120,7 @@ namespace DailyDepositReader
             {
                 Registers[i].Add(day.Registers[i]);
             }
+            CombinedRegisters.Add(day.CombinedRegisters);
         }
     }
 
@@ -1022,6 +1129,8 @@ namespace DailyDepositReader
         public HourlyDay Weekend = new HourlyDay();
         public HourlyDay Saturday = new HourlyDay();
         public HourlyDay Sunday = new HourlyDay();
+        public HourlyDay Monday = new HourlyDay();
+        public HourlyDay Friday = new HourlyDay();
         public HourlyDay Weekday = new HourlyDay();
     }
 }
